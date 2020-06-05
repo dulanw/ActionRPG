@@ -2,6 +2,7 @@
 
 #include "ActionRPGGameMode.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Player/RPGPlayerController.h"
 
 AActionRPGGameMode::AActionRPGGameMode()
 {
@@ -10,5 +11,6 @@ AActionRPGGameMode::AActionRPGGameMode()
 	if (PlayerPawnBPClass.Class != NULL)
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
+		PlayerControllerClass = ARPGPlayerController::StaticClass();
 	}
 }

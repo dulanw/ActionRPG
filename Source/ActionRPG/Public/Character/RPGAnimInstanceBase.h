@@ -28,21 +28,12 @@ protected:
 
 	//used only for fixing the issue with switching direction
 	//can go from -180 -> 180 (when you are moving forward) or 0 -> 360 (when you are moving backward)
-
-
-	float MoveDirection;
-
-	//This is the BlendSpace Direction we use, this is basically rounded up to the nearest 90 degree and then the root bone is rotated
+	//This is the BlendSpace Direction we use
 	UPROPERTY(BlueprintReadOnly, Category="Locomotion")
-	float LocomotionBlendSpaceDirection;
+	float LocomotionBSDirection;
 
-	//how much to rotate the root bone by to match the movement direction
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
-	float LocomotionRootRotation;
-
-	//Enable or disable Root Rotation, this is done if the character is jumping or falling, can be updated using a curve
-	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
-	float BlendLocomotionRootRotation;
+	bool bLocomotionMovingForward;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	float LocomotionPlayRate;
@@ -74,28 +65,7 @@ protected:
 
 	void UpdateLocomotionVars(float DeltaSeconds);
 
-
-	//testing
-	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
-	float DebugAngleRemainder;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
-	float DebugMoveDirection;
-
-
 	//ANIMATION OVERRIDES FOR CHARACTER/WEAPON
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Locomotion")
-	class UAnimSequence* IdleAnim;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Locomotion")
-	class UBlendSpace1D* LocomotionBlendSpace;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Locomotion")
-	class UAnimSequence* JumpLoopAnim;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Locomotion")
-	class UAnimSequence* JumpStartAnim;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Locomotion")
-	class UAnimSequence* JumpLandAnim;
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Upper Body")
+	class UAnimSequence* UpperBodyIdleAnim;
 };

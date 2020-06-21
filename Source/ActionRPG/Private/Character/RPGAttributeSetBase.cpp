@@ -117,15 +117,15 @@ void URPGAttributeSetBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 void URPGAttributeSetBase::OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(URPGAttributeSetBase, MaxHealth);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(URPGAttributeSetBase, MaxHealth, OldMaxHealth);
 }
 
 void URPGAttributeSetBase::OnRep_Health(const FGameplayAttributeData& OldHealth)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(URPGAttributeSetBase, Health);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(URPGAttributeSetBase, Health, OldHealth);
 }
 
 void URPGAttributeSetBase::OnRep_Armor(const FGameplayAttributeData& OldArmor)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(URPGAttributeSetBase, Armor);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(URPGAttributeSetBase, Armor, OldArmor);
 }

@@ -99,7 +99,11 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	/*InitAbilityActorInfo for the server host (listen server) since this is only called on the server*/
 	virtual void PossessedBy(AController* NewController) override;
+
+	/*InitAbilityActorInfo on everything else*/
+	virtual void OnRep_Controller() override;
 
 	//IAbilitySystemInterface function
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;

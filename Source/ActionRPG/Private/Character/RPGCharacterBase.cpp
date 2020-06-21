@@ -84,10 +84,19 @@ void ARPGCharacterBase::PossessedBy(AController* NewController)
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-		AbilitySystemComponent->RefreshAbilityActorInfo();
 	}
 
 	SetOwner(NewController);
+}
+
+void ARPGCharacterBase::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
 }
 
 UAbilitySystemComponent* ARPGCharacterBase::GetAbilitySystemComponent() const

@@ -8,10 +8,12 @@ void ARPGPlayerController::AcknowledgePossession(class APawn* P)
 {
 	Super::AcknowledgePossession(P);
 
+/*
+	//done in OnRep_Controller()
 	ARPGCharacterBase* CharacterBase = Cast<ARPGCharacterBase>(P);
 	if (CharacterBase)
 	{
 		CharacterBase->GetAbilitySystemComponent()->InitAbilityActorInfo(CharacterBase, CharacterBase);
 		CharacterBase->GetAbilitySystemComponent()->RefreshAbilityActorInfo();
-	}
+	}*/
 }

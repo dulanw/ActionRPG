@@ -136,16 +136,16 @@ bool ARPGCharacterBase::ActivateAbilitiesWithItemSlot(ERPGInventorySlot Slot, bo
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Ability component/handle NOT found"));
+		UE_LOG(LogTemp, Warning, TEXT("ARPGCharacterBase::ActivateAbilitiesWithItemSlot: ability component/handle NOT found, Make sure item/ability was added to slot"));
 	}
 
 	return false;
 }
 
-void ARPGCharacterBase::AddItemToSlot(ERPGInventorySlot Slot, TSubclassOf<UGameplayAbility> AbilityToAcquire, AActor* Actor /*= nullptr*/)
+void ARPGCharacterBase::AddAbilityToSlot(ERPGInventorySlot Slot, TSubclassOf<UGameplayAbility> AbilityToAcquire, AActor* Actor /*= nullptr*/)
 {
-	//can't do anything without the ability system or it's not authority
-	if (!AbilitySystemComponent || !HasAuthority())
+	//can't do anything without the ability system or it's not authority or we don't have an ability
+	if (!AbilitySystemComponent || !HasAuthority() || !AbilityToAcquire)
 	{
 		return;
 	}
@@ -156,7 +156,7 @@ void ARPGCharacterBase::AddItemToSlot(ERPGInventorySlot Slot, TSubclassOf<UGamep
 	{
 		//#TODO drop actor if found or destroy it....
 
-		//remove the ability
+		//remove the ability previous ability
 		AbilitySystemComponent->ClearAbility(FoundSlotData->AbilitySpecHandle);
 
 		//remove the index, just much easier than modifying the data depending on if we found it or not
@@ -165,24 +165,22 @@ void ARPGCharacterBase::AddItemToSlot(ERPGInventorySlot Slot, TSubclassOf<UGamep
 
 
 	FGameplayAbilitySpecHandle NewAbilitySpecHandle = AcquireAbility(AbilityToAcquire, Actor);
-	SlottedInventory.Add(FRPGInventorySlotData(Slot, NewAbilitySpecHandle, Actor));
+	if (NewAbilitySpecHandle.IsValid())
+	{
+		SlottedInventory.Add(FRPGInventorySlotData(Slot, NewAbilitySpecHandle, Actor));
+	}
 }
 
 FGameplayAbilitySpecHandle ARPGCharacterBase::AcquireAbility(TSubclassOf<UGameplayAbility> AbilityToAcquire, AActor* SourceObject /*= nullptr*/)
 {
-	if (!AbilitySystemComponent || !HasAuthority())
+	/*just a fail safe, this will be getting called by AddItemToSlot and it should already check for the component and authority, so should not fail*/
+	if (!AbilitySystemComponent || !HasAuthority() || !AbilityToAcquire)
 	{
 		return FGameplayAbilitySpecHandle();
 	}
 
-	if (AbilityToAcquire)
-	{
-
-		//pass INDEX_NONE for InputID since we aren't using the input mapping
-		return AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityToAcquire, 1, INDEX_NONE, SourceObject));
-	}
-
-	return FGameplayAbilitySpecHandle();
+	//pass INDEX_NONE for InputID since we aren't using the input mapping
+	return AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityToAcquire, 1, INDEX_NONE, SourceObject));
 }
 
 AActor* ARPGCharacterBase::GetCurrentWeapon() const

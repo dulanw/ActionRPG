@@ -198,9 +198,10 @@ public:
 	/*add an item to a slot, you should remove an item before adding, otherwise the actor might be lost if not dropped before
 	 *the actor might be null since you might be given an ability without
 	 *#TODO make it only take in an SlotItemActor or something similar
+	 *#TODO this requires AbilityToAcquire to be valid, add a function to remove items from slot
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
-	void AddItemToSlot(ERPGInventorySlot Slot, TSubclassOf<UGameplayAbility> AbilityToAcquire, AActor* Actor = nullptr);
+	void AddAbilityToSlot(ERPGInventorySlot Slot, TSubclassOf<UGameplayAbility> AbilityToAcquire, AActor* Actor = nullptr);
 
 	/*Add an ability to the user with sourceObject
 	 *returns the handle, or handle with INDEX_NONE if invalid GameplayAbility

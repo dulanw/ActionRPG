@@ -6,6 +6,12 @@
 #include "Character/RPGCharacterBase.h"
 #include "Animation/AnimMontage.h"
 
+URPGGameplayAbilityBase::URPGGameplayAbilityBase(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+}
+
 void URPGGameplayAbilityBase::HandleTargetData(const FGameplayAbilityTargetDataHandle& TargetData) const
 {
 	//return if no target data
@@ -37,10 +43,15 @@ void URPGGameplayAbilityBase::HandleTargetData(const FGameplayAbilityTargetDataH
 	}
 }
 
+void URPGGameplayAbilityBase::K2_HandleTargetData_Implementation(const FGameplayAbilityTargetDataHandle& TargetData) const
+{
+	HandleTargetData(TargetData);
+}
+
 FGameplayTagContainer URPGGameplayAbilityBase::GetDynamicCooldownTags() const
 {
-	//#TODO cast to a base weapon/ability actor which will have damages, crit chance etc..
-	const ARPGMeleeWeaponActor* SourceActor = Cast<ARPGMeleeWeaponActor>(GetCurrentSourceObject());
+	//#TODO cast to a base weapon/ability actor which will have damages, critical hit chance etc..
+	const ARPGAbilityActorBase* SourceActor = Cast<ARPGAbilityActorBase>(GetCurrentSourceObject());
 	const ARPGCharacterBase* AvatarCharacter = Cast<ARPGCharacterBase>(GetAvatarActorFromActorInfo());
 
 	if (!SourceActor || !AvatarCharacter)
@@ -64,31 +75,31 @@ FGameplayTagContainer URPGGameplayAbilityBase::GetDynamicCooldownTags() const
 
 float URPGGameplayAbilityBase::GetAnimPlayRate() const
 {
-	//#TODO cast to a base weapon/ability actor which will have damages, crit chance etc..
-	const ARPGMeleeWeaponActor* SourceActor = Cast<ARPGMeleeWeaponActor>(GetCurrentSourceObject());
+	const ARPGAbilityActorBase* SourceActor = Cast<ARPGAbilityActorBase>(GetCurrentSourceObject());
 	if (!SourceActor)
 	{
-		UE_LOG(LogAbilitySystem, Warning, TEXT("Ability %s GetAnimationPlayRate SourceActor null"), *GetName());
-		return 1.0f;
+		UE_LOG(LogAbilitySystem, Warning, TEXT("URPGGameplayAbilityBase::GetAnimPlayRate: Ability %s GetAnimationPlayRate SourceActor null"), *GetName());
+		return 0.0f;
 	}
 
 	UAnimMontage* AttackMontage = SourceActor->GetAbilityMontage();
 	if (!AttackMontage)
 	{
-		UE_LOG(LogAbilitySystem, Warning, TEXT("Ability %s GetAnimationPlayRate GetAbilityMontage returned null"), *GetName());
-		return 1.0f;
+		UE_LOG(LogAbilitySystem, Warning, TEXT("URPGGameplayAbilityBase::GetAnimPlayRate: Ability %s GetAnimationPlayRate GetAbilityMontage returned null"), *GetName());
+		return 0.0f;
 	}
 
-	//the play time cannot be more than the cooldown, we wanna finish anim before we can attack next
-	//we take the min from the cooldown or attackspeed
+	//the play time cannot be more than the cool down, we wanna finish anim before we can attack next
+	//we take the min from the cool down or attack speed
 	const float CooldownDuration = GetCooldownDuration(); //for melee attacks, the cool down is also our attack speed
-	const float MaxAnimPlayTime = SourceActor->GetMaxAnimPlayTime();
+	const float MaxAnimPlayTime = SourceActor->GetBaseAnimPlayTime();
 	
 	//we take the min of the 2, we don't want to still be playing the animation and we don't to play an animation at a rate that looks very slow if the
 	//cool down is really long
 	const float PlayTime = FMath::Min(CooldownDuration, MaxAnimPlayTime);
 	if (FMath::IsNearlyZero(PlayTime))
 	{
+		UE_LOG(LogAbilitySystem, Warning, TEXT("URPGGameplayAbilityBase::GetAnimPlayRate: AbilityActor %s CooldownDuration or MaxAnimePlayTime is nearly zero, not playing animation"), *(SourceActor->GetName()));
 		return 0.0f;
 	}
 
@@ -97,8 +108,7 @@ float URPGGameplayAbilityBase::GetAnimPlayRate() const
 
 UAnimMontage* URPGGameplayAbilityBase::GetAnimMontage() const
 {
-	//#TODO cast to a base weapon/ability actor which will have damages, crit chance etc..
-	const ARPGMeleeWeaponActor* SourceActor = Cast<ARPGMeleeWeaponActor>(GetCurrentSourceObject());
+	const ARPGAbilityActorBase* SourceActor = Cast<ARPGAbilityActorBase>(GetCurrentSourceObject());
 	if (!SourceActor)
 	{
 		UE_LOG(LogAbilitySystem, Warning, TEXT("Ability %s GetAnimMontage SourceActor null"), *GetName());
@@ -110,8 +120,7 @@ UAnimMontage* URPGGameplayAbilityBase::GetAnimMontage() const
 
 float URPGGameplayAbilityBase::GetCooldownDuration() const
 {
-	//#TODO calculate the attack speed after the effects have been applied or do it on the weapon itself
-	const ARPGMeleeWeaponActor* SourceActor = Cast<ARPGMeleeWeaponActor>(GetCurrentSourceObject());
+	const ARPGAbilityActorBase* SourceActor = Cast<ARPGAbilityActorBase>(GetCurrentSourceObject());
 
 	if (!SourceActor)
 	{
@@ -119,9 +128,9 @@ float URPGGameplayAbilityBase::GetCooldownDuration() const
 		return 0.0f;
 	}
 
-	UE_LOG(LogAbilitySystem, Warning, TEXT("Ability %f cooldown"), SourceActor->GetBaseAttackSpeed());
+	UE_LOG(LogAbilitySystem, Warning, TEXT("Ability %f cool down"), SourceActor->GetCooldownDuration());
 
-	return SourceActor->GetBaseAttackSpeed();
+	return SourceActor->GetCooldownDuration();
 }
 
 const FGameplayTagContainer* URPGGameplayAbilityBase::GetCooldownTags() const
@@ -160,7 +169,7 @@ void URPGGameplayAbilityBase::ApplyCooldown(const FGameplayAbilitySpecHandle Han
 	}
 }
 
-bool URPGGameplayAbilityBase::IsAuthority() const
+bool URPGGameplayAbilityBase::K2_HasAuthority() const
 {
 	const FGameplayAbilityActorInfo* const CurrentActorInfoPtr = GetCurrentActorInfo();
 	if (CurrentActorInfoPtr->OwnerActor.IsValid())
@@ -171,15 +180,14 @@ bool URPGGameplayAbilityBase::IsAuthority() const
 	return false;
 }
 
-bool URPGGameplayAbilityBase::IsLocalController() const
+bool URPGGameplayAbilityBase::K2_IsLocalController() const
 {
 	return IsLocallyControlled();
 }
 
 bool URPGGameplayAbilityBase::CalculateDamageMagnitude(float& OutDamageMagnitude) const
 {
-	//#TODO cast to a base weapon/ability actor which will have damages, crit chance etc..
-	const ARPGMeleeWeaponActor* SourceActor = Cast<ARPGMeleeWeaponActor>(GetCurrentSourceObject());
+	const ARPGAbilityActorBase* SourceActor = Cast<ARPGAbilityActorBase>(GetCurrentSourceObject());
 	const ARPGCharacterBase* AvatarCharacter = Cast<ARPGCharacterBase>(GetAvatarActorFromActorInfo());
 
 	if (!SourceActor || !AvatarCharacter)

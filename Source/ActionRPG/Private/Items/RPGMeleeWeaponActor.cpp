@@ -2,7 +2,6 @@
 
 
 #include "Items/RPGMeleeWeaponActor.h"
-#include "Character/RPGCharacterBase.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PrimitiveComponent.h"
@@ -28,14 +27,11 @@ ARPGMeleeWeaponActor::ARPGMeleeWeaponActor(const FObjectInitializer& ObjectIniti
 	CollisionComponent->SetCollisionProfileName(TEXT("Melee"));
 	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); //disable collision by default
 	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ARPGMeleeWeaponActor::OnBeginOverlap);
-
-	BaseAttackSpeed = 1.0f;
-	BaseDamage = 10.0f;
 }
 
-void ARPGMeleeWeaponActor::OnRep_Instigator()
+TSubclassOf<UGameplayAbility> ARPGMeleeWeaponActor::GetAbilityGranted() const
 {
-	Super::OnRep_Instigator();
+	return AbilityGranted;
 }
 
 // Called when the game starts or when spawned
@@ -48,40 +44,6 @@ void ARPGMeleeWeaponActor::BeginPlay()
 void ARPGMeleeWeaponActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-}
-
-void ARPGMeleeWeaponActor::GiveTo(ARPGCharacterBase* NewOwner)
-{
-	//can only pick up weapons on the server.
-	if (!HasAuthority())
-	{
-		return;
-	}
-
-	SetInstigator(NewOwner);
-	SetOwner(NewOwner);
-
-	//PrimaryActorTick.AddPrerequisite(NewOwner, NewOwner->PrimaryActorTick);
-	//ClientGiveTo(GetInstigator()); //not really needed since the instigator and the owner is replicated
-	//implement the code below if there are issues with the owner replication
-	/*
-	void AFPSEquipableItem::ClientGiveTo_Implementation(APawn * NewInstigator)
-	{
-		if (NewInstigator != nullptr)
-		{
-			SetInstigator(NewInstigator);
-			ClientGiveTo_Internal();
-		}
-	}
-
-	void AFPSEquipableItem::ClientGiveTo_Internal()
-	{
-		checkSlow(Instigator != NULL);
-		SetOwner(GetInstigator());
-		FPSOwner = Cast<AFPSCharacterBase>(GetInstigator());
-		checkSlow(FPSOwner != NULL);
-		PrimaryActorTick.AddPrerequisite(FPSOwner, FPSOwner->PrimaryActorTick);
-	}*/
 }
 
 

@@ -226,14 +226,13 @@ void URPGAT_WaitTargetData::Activate()
 			}
 			else //don't destroy the reusable actors
 			{
-				TargetActor = nullptr;
-
-				// We may need a better solution here.  We don't know the target actor isn't needed till after it's already been spawned.
 				if (!bReusableActor)
 				{
+					// We may need a better solution here.  We don't know the target actor isn't needed till after it's already been spawned.
 					SpawnedActor->Destroy(); //only destroy if it's not a reusable actor
 				}
-				
+
+				TargetActor = nullptr;
 				SpawnedActor = nullptr;
 			}
 		}
@@ -349,7 +348,7 @@ void URPGAT_WaitTargetData::RegisterTargetDataCallbacks()
 			FGameplayAbilitySpecHandle	SpecHandle = GetAbilitySpecHandle();
 			FPredictionKey ActivationPredictionKey = GetActivationPredictionKey();
 
-			//Since multifire is supported, we still need to hook up the callbacks
+			//Since multi fire is supported, we still need to hook up the callbacks
 			AbilitySystemComponent->AbilityTargetDataSetDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &URPGAT_WaitTargetData::OnTargetDataReplicatedCallback);
 			AbilitySystemComponent->AbilityTargetDataCancelledDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &URPGAT_WaitTargetData::OnTargetDataReplicatedCancelledCallback);
 
@@ -364,7 +363,8 @@ void URPGAT_WaitTargetData::OnDestroy(bool AbilityEnded)
 {
 	if (TargetActor)
 	{
-		//AGSGATA_Trace* TraceTargetActor = Cast<AGSGATA_Trace>(TargetActor);
+
+		/*//AGSGATA_Trace* TraceTargetActor = Cast<AGSGATA_Trace>(TargetActor);
 		//if (TraceTargetActor)
 		//{
 		//	TraceTargetActor->StopTargeting();
@@ -381,7 +381,7 @@ void URPGAT_WaitTargetData::OnDestroy(bool AbilityEnded)
 		//	AbilitySystemComponent->GenericLocalConfirmCallbacks.RemoveDynamic(TargetActor, &AGameplayAbilityTargetActor::ConfirmTargeting);
 		//	AbilitySystemComponent->GenericLocalCancelCallbacks.RemoveDynamic(TargetActor, &AGameplayAbilityTargetActor::CancelTargeting);
 		//	TargetActor->GenericDelegateBoundASC = nullptr;
-		//}
+		//}*/
 
 		if (bReusableActor)
 		{

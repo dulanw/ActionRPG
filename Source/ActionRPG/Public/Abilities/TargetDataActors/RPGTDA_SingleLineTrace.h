@@ -16,8 +16,9 @@ class ACTIONRPG_API ARPGTDA_SingleLineTrace : public AGameplayAbilityTargetActor
 public:
 	ARPGTDA_SingleLineTrace(const FObjectInitializer& ObjectInitializer);
 
+	//need to override this since AGameplayAbilityTargetActor_Trace set bDebug to false here always
 	virtual void ConfirmTargetingAndContinue() override;
 
 protected:
-	virtual FHitResult PerformTrace(AActor* InSourceActor) override;
+	virtual FHitResult PerformTrace(AActor* InSourceActor) override; //#TODO right now it's doing the trace from the overhead camera, do another trace from the character pos/weapon muzzle to hit
 };

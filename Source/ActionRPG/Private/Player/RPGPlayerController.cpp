@@ -2,9 +2,9 @@
 
 
 #include "Player/RPGPlayerController.h"
-#include "Character/RPGCharacterBase.h"
+//#include "Character/RPGCharacterBase.h"
 
-void ARPGPlayerController::AcknowledgePossession(class APawn* P)
+void ARPGPlayerController::AcknowledgePossession(APawn* P)
 {
 	Super::AcknowledgePossession(P);
 

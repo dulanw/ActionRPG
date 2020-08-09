@@ -6,6 +6,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Character/RPGCharacterBase.h"
 
 
 // Sets default values
@@ -15,23 +16,21 @@ ARPGMeleeWeaponActor::ARPGMeleeWeaponActor(const FObjectInitializer& ObjectIniti
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
-	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-
-	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
-	Mesh->SetupAttachment(RootComponent);
-
 	CollisionComponent = CreateDefaultSubobject<UCapsuleComponent>("Collision");
-	CollisionComponent->SetupAttachment(RootComponent); //attach to root so that mesh scaling doesn't effect the collision, scale the whole actor if you need to do that
+	CollisionComponent->SetupAttachment(GetMesh()); //attach to root so that mesh scaling doesn't effect the collision, scale the whole actor if you need to do that
 	CollisionComponent->SetCapsuleSize(15.0f, 40.0f, false);
 	CollisionComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 40.0f));
-	CollisionComponent->SetCollisionProfileName(TEXT("Melee"));
+	CollisionComponent->SetCollisionProfileName(TEXT("OverlapOnlyPawn"));
 	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); //disable collision by default
-	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ARPGMeleeWeaponActor::OnBeginOverlap);
 }
 
-TSubclassOf<UGameplayAbility> ARPGMeleeWeaponActor::GetAbilityGranted() const
+void ARPGMeleeWeaponActor::PostInitializeComponents()
 {
-	return AbilityGranted;
+	Super::PostInitializeComponents();
+
+	//just make sure we don't get any problems with the blueprints
+	//this will crash if you had in the constructor and moved it, will need to reparent the blueprint classes
+	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &ARPGMeleeWeaponActor::OnBeginOverlap);
 }
 
 // Called when the game starts or when spawned
@@ -51,10 +50,7 @@ void ARPGMeleeWeaponActor::BeginAttack()
 {
 	IgnoredActors.Empty();
 
-	//hit detection done on the server but predicted on the client
-	bool bEnableCollision = GetInstigator()->IsLocallyControlled() || GetOwner()->HasAuthority();
-
-	ECollisionEnabled::Type CollisionEnabled = bEnableCollision ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision;
+	ECollisionEnabled::Type CollisionEnabled = GetOwner()->HasAuthority() ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision;
 	CollisionComponent->SetCollisionEnabled(CollisionEnabled);	//query only since that enables overlaps, doesn't need physics
 }
 
@@ -66,7 +62,7 @@ void ARPGMeleeWeaponActor::EndAttack()
 void ARPGMeleeWeaponActor::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	//even though we ignore our actor, our actor does not 
-	if (OtherActor == GetOwner() || IgnoredActors.Contains(OtherActor)) 
+	if (AvatarCharacter == OtherActor || IgnoredActors.Contains(OtherActor))
 	{
 		return;
 	}
@@ -78,5 +74,6 @@ void ARPGMeleeWeaponActor::OnBeginOverlap(UPrimitiveComponent* OverlappedCompone
 	Payload.Instigator = this;
 	Payload.Target = OtherActor;
 
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(GetOwner(), EventTag, Payload); //use the blueprint library
+	//we assume that the player's ability system component is on the AvatarCharacter
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(AvatarCharacter, EventTag, Payload); //use the blueprint library
 }

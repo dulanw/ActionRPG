@@ -5,70 +5,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
-#include "AbilitySystemComponent.h"
-#include "Abilities/GameplayAbility.h"
+#include "Character/RPGInventoryComponent.h"
 #include "RPGCharacterBase.generated.h"
 
-
-//#TODO Move CharacterBase->GetAbilitySystemComponent()->InitAbilityActorInfo(CharacterBase, CharacterBase); from controller to pawn OnRep_Controller
-
-//enum used to bind the input to ability
-//don't use since AI can't use it
-UENUM(BlueprintType)
-enum class ERPGInventorySlot : uint8
-{
-	SLOT_NONE		UMETA(DisplayName = "SLOT_NONE"),
-	WeaponSlot1		UMETA(DisplayName = "Weapon Slot 1"),
-	WeaponSlot2		UMETA(DisplayName = "Weapon Slot 2"),
-	AbilitySlot1	UMETA(DisplayName = "Ability Slot 1"),
-	AbilitySlot2	UMETA(DisplayName = "Ability Slot 2")
-};
-
-USTRUCT(BlueprintType)
-struct FRPGInventorySlotData
-{
-	GENERATED_BODY()
-
-	//the current slot
-	UPROPERTY()
-	ERPGInventorySlot Slot;
-
-	//the current ability handle
-	UPROPERTY()
-	FGameplayAbilitySpecHandle AbilitySpecHandle;
-
-	//Current actor, when picked up need to be assigned alongside the ability spec handle and removed when dropped
-	//some might not have an actor but most should, since you are able to pick up and drop items (don't delete and respawn, just hide it)
-	UPROPERTY()
-	AActor* Actor;
-
-	FRPGInventorySlotData()
-		: Slot(ERPGInventorySlot::SLOT_NONE), AbilitySpecHandle(FGameplayAbilitySpecHandle()), Actor(nullptr) 
-	{ 
-
-	}
-
-	FRPGInventorySlotData(ERPGInventorySlot InSlot, FGameplayAbilitySpecHandle InAbilitySpecHandle, AActor* InActor)
-		: Slot(InSlot), AbilitySpecHandle(InAbilitySpecHandle), Actor(InActor)
-	{
-
-	}
-
-	bool operator==(const FRPGInventorySlotData& Other) const
-	{
-		return (Slot == Other.Slot);
-	}
-
-	bool operator==(const ERPGInventorySlot& InSlot) const
-	{
-		return (InSlot == Slot);
-	}
-
-	bool operator==(const FGameplayAbilitySpecHandle& InAbilitySpecHandle) const
-	{
-		return (InAbilitySpecHandle == AbilitySpecHandle);
-	}
-};
 
 UCLASS(config=Game)
 class ARPGCharacterBase : public ACharacter, public IAbilitySystemInterface
@@ -76,47 +15,33 @@ class ARPGCharacterBase : public ACharacter, public IAbilitySystemInterface
 	GENERATED_BODY()
 
 	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
 
 	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
 
 	/** Our ability system */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Abilities, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
 	UAbilitySystemComponent* AbilitySystemComponent;
-
-	//the cool down tag corresponding to each slot, if the tag or slot is empty from this list then there will be no cool down for that slot
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities, meta = (AllowPrivateAccess = "true"))
-	TMap<ERPGInventorySlot, FGameplayTagContainer> SlotCooldownTags;
 
 	UPROPERTY()
 	class URPGAttributeSetBase* CharacterAttributeSet;
 
+	/** Ref to our player inventory system, since you need to be able to do OwnerPawn->GetInventoryComponent from the ability since the Owner and OwnerPawn are both set to the pawn
+	 *this is set in OnRep_PlayerState for the client and Un/OnPossess on server
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+	class URPGInventoryComponent* InventoryComponent;
+
 public:
-	ARPGCharacterBase(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
-
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	/*InitAbilityActorInfo for the server host (listen server) since this is only called on the server*/
-	virtual void PossessedBy(AController* NewController) override;
-
-	/*InitAbilityActorInfo on everything else*/
-	virtual void OnRep_Controller() override;
-
-	//IAbilitySystemInterface function
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-
-	UFUNCTION(BlueprintCallable)
-	virtual URPGAttributeSetBase* GetCharacterAttributeSet();
-
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	float BaseTurnRate;
 
 	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	float BaseLookUpRate;
 
 	static FName AbilitySystemComponentName;
@@ -128,11 +53,30 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
+	ARPGCharacterBase(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	/*InitAbilityActorInfo for the server host (listen server) since this is only called on the server*/
+	virtual void PossessedBy(AController* NewController) override;
+
+	/*InitAbilityActorInfo on everything else, see OnRep_PlayerState*/
+	virtual void OnRep_Controller() override;
+
+	/*#TODO create an instance of the inventory UI for swapping weapons, so opening and closing does not create and destroy the widget*/
+	/*InitAbilityActorInfo for the ability system component on the client, do it here instead of OnRep_Controller since the ability may need the inventory system to be valid*/
+	virtual void OnRep_PlayerState() override;
+
+	//IAbilitySystemInterface function
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	UFUNCTION(BlueprintCallable)
+	virtual URPGAttributeSetBase* GetCharacterAttributeSet();
+
+	UFUNCTION(BlueprintCallable)
+	virtual class URPGInventoryComponent* GetInventoryComponent() const { return InventoryComponent; };
+
 protected:
-
-	/** Resets HMD orientation in VR. */
-	void OnResetVR();
-
 	/** Called for forwards/backward input */
 	void MoveForward(float Value);
 
@@ -151,68 +95,81 @@ protected:
 	 */
 	void LookUpAtRate(float Rate);
 
-	/** Handler for when a touch input begins. */
-	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
-
-	/** Handler for when a touch input stops. */
-	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
-
 	/*input for normal attack*/
 	void NormalAttack();
+
+
+	//////////////////////////////////////////////////////////////////////////
+	//INVENTORY
+	//////////////////////////////////////////////////////////////////////////
+
+	//how far to trace from the 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	float InteractTraceDistance;
+
+	//how close the item has to be close to the avatar actor to be able to interact with it
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	float InteractDistance;
+
+	//how close the item has to be close to the avatar actor to be able to interact with it
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory", DisplayName = "Inventory UI Class")
+	TSubclassOf<class URPGInventoryUI> InventoryUIClass;
+
+	UPROPERTY()
+	class URPGInventoryUI* InventoryUI;
+
+	//this is used to check if we have the inventory open each tick, and if so we will check if ItemToEquip is valid and that the distance between the pawn the item to pick up is less
+	//than InteractDistance, if we are sliding and we try to pick up an item then we don't want to pick it up when we are too far away
+	bool bInventoryUIOpen; 
+
+	//temp var to hold what item we are trying to equip, when the OnSelectSlotInventoryUI is called then we will be equipping this item
+	class ARPGInventoryItemBase* ItemToPickup;
+
+	class URPGInventoryUI* CreateInventoryUIWidget(APlayerController* LocalController, class URPGInventoryComponent* InInventoryComponent);
+
+	//do a new line trace and interact with the object that the player is looking at.
+	//there should be another trace that runs every tick that checks if the player is looking at any interactive object and display the info
+	void Interact();
+
+	/*called when the user select which item to pick up and if they selected a slot, passive items don't need a slot
+	 called here since the inventory item need will return an item if swapping and need to be able to place it on the floor next the pawn*/
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_PickupItem(class ARPGInventoryItemBase* Item, ERPGInventorySlot Slot = ERPGInventorySlot::None);
+
+public:
+	//callback when the user click on one of the inventory slots
+	void OnSelectSlotInventoryUI(ERPGInventorySlot SelectedSlot);
+
+	//callback when the user closes inventory (by clicking close without selecting a slot)
+	void OnCloseInventoryUI();
+
 
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
-	/** Map of slot to ability granted by that slot. Only contain the currently usable abilities, so if the player has 2 weapons
-	 * Only the currently equipped items ability will be in this, will need to change/update the SlottedAbilities when switching weapons*/
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities | Inventory") //#TODO replicate to owner only
-	//TMap<FRPGInventorySlots, FGameplayAbilitySpecHandle> SlottedAbilities;
-
-	/*contains the abilities for the inventory slots, i.e only usable abilities and weapons, primary and secondary weapon included at the same time
-	 *use a variable i.e. CurrentWeaponSlot = weaponslot1 etc.. 
-	 *using a TArray instead of TMap since this needs to be replicated, use .Find with FRPGInventorySlot to find the corresponding ability and actor or 
-	 *use the ability handle to find which slot it's occupying, which then you can use to find the cool down tag on SlotCooldownTags etc
-	 */
-	UPROPERTY(ReplicatedUsing = OnRep_SlottedInventory, VisibleAnywhere, BlueprintReadOnly, Category = "Abilities | Inventory")
-	TArray<FRPGInventorySlotData> SlottedInventory;
-
-	/** Called on owning client when SlottedInventory is replicated.*/
-	UFUNCTION()
-	virtual void OnRep_SlottedInventory();
-
 public:
-	//get the slotted inventory list
-	TArray<FRPGInventorySlotData> GetSlottedInventory() { return SlottedInventory; }
-
-	//Get the slot which the gameplay ability is slotted to. used to find the cooldown tag for the slot
-	ERPGInventorySlot GetGameplayAbilityHandleSlot(const FGameplayAbilitySpecHandle& AbilitySpecHandle) const;
-
-	FGameplayTagContainer GetSlotCooldownTags(const ERPGInventorySlot& Slot) const;
 
 	/**
-	 * Attempts to activate any ability in the specified item slot. Will return false if no activatable ability found or activation fails
-	 * Returns true if it thinks it activated, but it may return false positives due to failure later in activation.
-	 * If bAllowRemoteActivation is true, it will remotely activate local/server abilities, if false it will only try to locally activate the ability
+	 * Activate the ability using data from inventory component, use the component on character with AI and PlayerState with Players.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
-	bool ActivateAbilitiesWithItemSlot(ERPGInventorySlot Slot, bool bAllowRemoteActivation = true);
+	bool ActivateAbilitiesWithInputID(ERPGAbilityInputID InputID, bool bAllowRemoteActivation = true);
 
-	/*add an item to a slot, you should remove an item before adding, otherwise the actor might be lost if not dropped before
-	 *the actor might be null since you might be given an ability without
-	 *#TODO make it only take in an SlotItemActor or something similar
-	 *#TODO this requires AbilityToAcquire to be valid, add a function to remove items from slot
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-	void AddAbilityToSlot(ERPGInventorySlot Slot, TSubclassOf<UGameplayAbility> AbilityToAcquire, AActor* Actor = nullptr);
+	//ARPGInventoryItemBase maybe this should be of type RPGACtiveAbilityActor, since all weapons should be of this type
+	class ARPGInventoryItemBase* GetCurrentWeapon() const;
 
-	/*Add an ability to the user with sourceObject
-	 *returns the handle, or handle with INDEX_NONE if invalid GameplayAbility
-	 *#TODO pass in level, and other values etc...
-	 */
-	FGameplayAbilitySpecHandle AcquireAbility(TSubclassOf<UGameplayAbility> AbilityToAcquire, AActor* SourceObject = nullptr);
+	//function called by the MeleeAttackNotifyState, in the character base so that both the player and ai can use the same AnimNotify
+	//the ai characters will need to override this in the blueprints
+	//this is used for enabling the collision on the current weapon, can be overridden so that the characters arms will have the capsules
+	UFUNCTION(BlueprintNativeEvent, Category = "Abilities")
+	void OnMeleeAttackStarted();
 
-	AActor* GetCurrentWeapon() const;
+	//function called by the MeleeAttackNotifyState, in the character base so that both the player and ai can use the same AnimNotify
+	//the ai characters will need to override this in the blueprints
+	//this is used for disabling the collision on the current weapon, can be overridden so that the characters arms will have the capsules
+	UFUNCTION(BlueprintNativeEvent, Category = "Abilities")
+	void OnMeleeAttackEnded();
 };
 

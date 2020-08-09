@@ -65,7 +65,7 @@ void URPGDamageExecutionCalculation::Execute_Implementation(const FGameplayEffec
 	// SetByCaller Damage, damage should always be positive
 	float UnmitigatedDamage = FMath::Max<float>(Spec.GetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.Damage"))), 0.0f);
 
-	//send the game play event, Event.ReceiveHit to hit actor, this is the unmitigatedDamage, before armor or refelections etc.
+	//send the game play event, Event.ReceiveHit to hit actor, this is the unmitigatedDamage, before armor or reflection etc.
 	FGameplayTag EventTag(FGameplayTag::RequestGameplayTag(FName("Event.ReceiveHit"))); //#TODO send a different tag if attack missed? Event.ReceiveMissedHit
 	FGameplayEventData Payload;
 	Payload.Instigator = SourceActor;

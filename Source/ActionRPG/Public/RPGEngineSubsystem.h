@@ -7,7 +7,7 @@
 #include "RPGEngineSubsystem.generated.h"
 
 /**
- * 
+ * base inventory ui, used for displaying the inventory when pressing TAB and when picking up items. need to pass in a bool when opening
  */
 UCLASS()
 class ACTIONRPG_API URPGEngineSubsystem : public UEngineSubsystem

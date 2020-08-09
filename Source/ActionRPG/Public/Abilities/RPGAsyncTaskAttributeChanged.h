@@ -13,7 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAttributeChanged, FGameplayAtt
  * Blueprint node to automatically register a listener for all attribute changes in an AbilitySystemComponent.
  * Useful to use in UI.
  */
-UCLASS()
+UCLASS(BlueprintType, meta = (ExposedAsyncProxy = AsyncTask))
 class ACTIONRPG_API URPGAsyncTaskAttributeChanged : public UBlueprintAsyncActionBase
 {
 	GENERATED_BODY()
@@ -38,8 +38,9 @@ public:
 
 protected:
 	UPROPERTY()
-	UAbilitySystemComponent* ASC;
+	UAbilitySystemComponent* AbilitySystemComponentRef;
 
+	//the attributes we are listening for, used to clear the callbacks
 	FGameplayAttribute AttributeToListenFor;
 	TArray<FGameplayAttribute> AttributesToListenFor;
 

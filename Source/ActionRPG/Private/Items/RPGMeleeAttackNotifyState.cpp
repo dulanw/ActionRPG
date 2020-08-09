@@ -9,11 +9,10 @@ void URPGMeleeAttackNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, U
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration);
 	ARPGCharacterBase* CharOwner = Cast<ARPGCharacterBase>(MeshComp->GetOwner());
-	ARPGMeleeWeaponActor* MeleeWeapon = CharOwner ? Cast<ARPGMeleeWeaponActor>(CharOwner->GetCurrentWeapon()) : nullptr;
 
-	if (MeleeWeapon)
+	if (CharOwner)
 	{
-		MeleeWeapon->BeginAttack();
+		CharOwner->OnMeleeAttackStarted();
 	}
 }
 
@@ -22,10 +21,9 @@ void URPGMeleeAttackNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAn
 	Super::NotifyEnd(MeshComp, Animation);
 
 	ARPGCharacterBase* CharOwner = Cast<ARPGCharacterBase>(MeshComp->GetOwner());
-	ARPGMeleeWeaponActor* MeleeWeapon = CharOwner ? Cast<ARPGMeleeWeaponActor>(CharOwner->GetCurrentWeapon()) : nullptr;
 
-	if (MeleeWeapon)
+	if (CharOwner)
 	{
-		MeleeWeapon->EndAttack();
+		CharOwner->OnMeleeAttackEnded();
 	}
 }

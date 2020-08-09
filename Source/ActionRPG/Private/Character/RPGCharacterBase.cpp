@@ -2,15 +2,22 @@
 
 #include "Character/RPGCharacterBase.h"
 #include "Character/RPGAttributeSetBase.h"
-#include "HeadMountedDisplayFunctionLibrary.h"
+#include "Player/RPGPlayerState.h"
+#include "Player/RPGPlayerController.h"
+#include "Character/RPGInventoryComponent.h"
+#include "Items/RPGInventoryItemBase.h"
+#include "Items/RPGMeleeWeaponActor.h"
+#include "UI/RPGInventoryUI.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Items/RPGMeleeWeaponActor.h"
 #include "Net/UnrealNetwork.h"
+#include "ActionRPG.h"
+
+#include "DrawDebugHelpers.h"
 
 FName ARPGCharacterBase::AbilitySystemComponentName(TEXT("AbilitySystemComponent"));
 
@@ -63,40 +70,171 @@ ARPGCharacterBase::ARPGCharacterBase(const FObjectInitializer& ObjectInitializer
 
 	CharacterAttributeSet = CreateDefaultSubobject<URPGAttributeSetBase>(ARPGCharacterBase::CharacterAttributeSetName);
 
-	//default SlotCooldownTags init
-	SlotCooldownTags.Add(ERPGInventorySlot::WeaponSlot1, FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Cooldown.Slot.WeaponSlot1"))));
-	SlotCooldownTags.Add(ERPGInventorySlot::WeaponSlot2, FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Cooldown.Slot.WeaponSlot2"))));
-	SlotCooldownTags.Add(ERPGInventorySlot::AbilitySlot1, FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Cooldown.Slot.AbilitySlot1"))));
-	SlotCooldownTags.Add(ERPGInventorySlot::AbilitySlot2, FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Cooldown.Slot.AbilitySlot2"))));
+	InteractTraceDistance = 1000.0f;
+	InteractDistance = 200.0f;
+
+	ItemToPickup = nullptr;
+	bInventoryUIOpen = false;
 }
 
 void ARPGCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME_CONDITION(ARPGCharacterBase, SlottedInventory, COND_OwnerOnly);
 }
 
 void ARPGCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
+	//if we have a valid player state then we get the inventory, it should only have a player state if we have a valid controller but we still need to check if it's local
+	ARPGPlayerState* PS = GetPlayerState<ARPGPlayerState>();
+	if (PS)
+	{
+		InventoryComponent = PS->GetPlayerInventoryComponent();
+
+		ARPGPlayerController* PC = GetController<ARPGPlayerController>();
+		if (PC && PC->IsLocalController())
+		{
+			//if we are the local player then we need to do the HUD and then the rest of the stuff
+			//just check for PC since player controller will not be valid on simulated proxies
+
+			InventoryUI = CreateInventoryUIWidget(PC, InventoryComponent);
+		}
+	}
+
+	//we need to InitAbilityActorInfo for both the player and ai
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
-
-	SetOwner(NewController);
 }
 
 void ARPGCharacterBase::OnRep_Controller()
 {
 	Super::OnRep_Controller();
 
-	if (AbilitySystemComponent)
+/*
+	ARPGPlayerController* PC = GetController<ARPGPlayerController>();
+	if (PC)
 	{
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		PC->GetPlayerState()
+	}*/
+}
+
+void ARPGCharacterBase::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	//We set the inventory component from the player state on all clients, including simulated proxy
+	ARPGPlayerState* PS = GetPlayerState<ARPGPlayerState>();
+	if (PS)
+	{
+		//if we have a valid player state then we get the inventory
+		InventoryComponent = PS->GetPlayerInventoryComponent();
+
+		ARPGPlayerController* PC = GetController<ARPGPlayerController>();
+		if (PC) //this is the same as PossessedBy but we don't have to check if it's a local player controller since only the owners controller is replicated
+		{
+			//if we are the local player then we need to do the HUD and then the rest of the stuff
+			//just check for PC since player controller will not be valid on simulated proxies
+
+			InventoryUI = CreateInventoryUIWidget(PC, InventoryComponent);
+
+			//don't need to init the ability on simulated proxies (or ai, since for ai it will be done on the PossessedBy)
+			if (AbilitySystemComponent)
+			{
+				AbilitySystemComponent->InitAbilityActorInfo(this, this);
+			}
+		}
 	}
+}
+
+URPGInventoryUI* ARPGCharacterBase::CreateInventoryUIWidget(APlayerController* LocalController, URPGInventoryComponent* InInventoryComponent)
+{
+	URPGInventoryUI* Widget = CreateWidget<URPGInventoryUI>(LocalController, InventoryUIClass);
+	Widget->OnInventorySelectSlot.AddUObject(this, &ARPGCharacterBase::OnSelectSlotInventoryUI);
+	Widget->OnInventoryClose.AddUObject(this, &ARPGCharacterBase::OnCloseInventoryUI);
+	Widget->InitializeWidget(InInventoryComponent);
+
+	return Widget;
+}
+
+void ARPGCharacterBase::OnSelectSlotInventoryUI(ERPGInventorySlot SelectedSlot)
+{
+	if (InventoryComponent)
+	{
+		Server_PickupItem(ItemToPickup, SelectedSlot); //calling Server RPC on listen-server, doesn't really matter since it runs on it as well
+	}
+
+	ItemToPickup = nullptr;
+	bInventoryUIOpen = false;
+	if (InventoryUI)
+	{
+		InventoryUI->Hide();
+	}
+}
+
+void ARPGCharacterBase::OnCloseInventoryUI()
+{
+	ItemToPickup = nullptr;
+	bInventoryUIOpen = false;
+	if (InventoryUI)
+	{
+		InventoryUI->Hide();
+	}
+}
+
+void ARPGCharacterBase::Interact()
+{
+	const APlayerController* PC = GetController<APlayerController>();
+
+	//only if we are player and local controller
+	if (!PC || !PC->IsLocalController())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Must be called on Local Controller"));
+		return;
+	}
+
+	FVector ViewLocation;
+	FRotator ViewRotation;
+	PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
+
+	FVector EndLocation = ViewLocation + ViewRotation.Vector() * InteractTraceDistance;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(ARPGCharacterBase), false, this); //ignore the character
+
+	FHitResult OutHit(1.0f);
+	GetWorld()->LineTraceSingleByChannel(OutHit, ViewLocation, EndLocation, COLLISION_INTERACT, Params);
+
+	DrawDebugLine(GetWorld(), ViewLocation, EndLocation, FColor::Red, true);
+
+	if (OutHit.IsValidBlockingHit())
+	{
+		ARPGInventoryItemBase* InventoryItem = Cast<ARPGInventoryItemBase>(OutHit.GetActor());
+		if (InventoryItem && InventoryItem->ItemType > ERPGItemType::PassiveItem && InventoryUI) //we should only open the inventory screen if it's an active item or weapon
+		{
+			ItemToPickup = InventoryItem;
+			bInventoryUIOpen = true;
+			InventoryUI->Show(InventoryItem);
+		}
+	}
+}
+
+void ARPGCharacterBase::Server_PickupItem_Implementation(ARPGInventoryItemBase* Item, ERPGInventorySlot Slot /*= ERPGInventorySlot::None*/)
+{
+	if (!InventoryComponent)
+	{
+		return;
+	}
+
+	if (Item && Item->ItemType > ERPGItemType::PassiveItem && Slot != ERPGInventorySlot::None)
+	{ 
+		InventoryComponent->AddItem(Item, Slot);
+	}
+}
+
+bool ARPGCharacterBase::Server_PickupItem_Validate(ARPGInventoryItemBase* Item, ERPGInventorySlot Slot /*= ERPGInventorySlot::None*/)
+{
+	return true;
 }
 
 UAbilitySystemComponent* ARPGCharacterBase::GetAbilitySystemComponent() const
@@ -109,100 +247,44 @@ URPGAttributeSetBase* ARPGCharacterBase::GetCharacterAttributeSet()
 	return CharacterAttributeSet;
 }
 
-ERPGInventorySlot ARPGCharacterBase::GetGameplayAbilityHandleSlot(const FGameplayAbilitySpecHandle& AbilitySpecHandle) const
+bool ARPGCharacterBase::ActivateAbilitiesWithInputID(ERPGAbilityInputID InputID, bool bAllowRemoteActivation /*= true*/)
 {
-	const FRPGInventorySlotData* const FoundSlotData = SlottedInventory.FindByKey(AbilitySpecHandle);
-
-	if (FoundSlotData)
+	if (GetInventoryComponent())
 	{
-		return FoundSlotData->Slot;
-	}
-
-	return ERPGInventorySlot::SLOT_NONE;
-}
-
-FGameplayTagContainer ARPGCharacterBase::GetSlotCooldownTags(const ERPGInventorySlot& Slot) const
-{
-	const FGameplayTagContainer* CooldownTag = SlotCooldownTags.Find(Slot);
-
-	if (CooldownTag)
-	{
-		return *CooldownTag;
-	}
-
-	return FGameplayTagContainer();
-}
-
-bool ARPGCharacterBase::ActivateAbilitiesWithItemSlot(ERPGInventorySlot Slot, bool bAllowRemoteActivation /*= true*/)
-{
-	//Find returns a pointer, so make sure to dereference it
-	FRPGInventorySlotData* FoundSlotData = SlottedInventory.FindByKey(Slot);
-
-	//make sure the slot data is found and the ability spec handle is valid
-	if (FoundSlotData && FoundSlotData->AbilitySpecHandle.IsValid() && AbilitySystemComponent)
-	{
-		return AbilitySystemComponent->TryActivateAbility(FoundSlotData->AbilitySpecHandle, bAllowRemoteActivation);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("ARPGCharacterBase::ActivateAbilitiesWithItemSlot: ability component/handle NOT found, Make sure item/ability was added to slot"));
+		return GetInventoryComponent()->ActivateAbilitiesWithInputID(InputID, bAllowRemoteActivation);
 	}
 
 	return false;
 }
 
-void ARPGCharacterBase::AddAbilityToSlot(ERPGInventorySlot Slot, TSubclassOf<UGameplayAbility> AbilityToAcquire, AActor* Actor /*= nullptr*/)
+ARPGInventoryItemBase* ARPGCharacterBase::GetCurrentWeapon() const
 {
-	//can't do anything without the ability system or it's not authority or we don't have an ability
-	if (!AbilitySystemComponent || !HasAuthority() || !AbilityToAcquire)
+	if (GetInventoryComponent())
 	{
-		return;
-	}
-
-	FRPGInventorySlotData* FoundSlotData = SlottedInventory.FindByKey(Slot);
-
-	if (FoundSlotData)
-	{
-		//#TODO drop actor if found or destroy it....
-
-		//remove the ability previous ability
-		AbilitySystemComponent->ClearAbility(FoundSlotData->AbilitySpecHandle);
-
-		//remove the index, just much easier than modifying the data depending on if we found it or not
-		SlottedInventory.Remove(*FoundSlotData);
-	}
-
-
-	FGameplayAbilitySpecHandle NewAbilitySpecHandle = AcquireAbility(AbilityToAcquire, Actor);
-	if (NewAbilitySpecHandle.IsValid())
-	{
-		SlottedInventory.Add(FRPGInventorySlotData(Slot, NewAbilitySpecHandle, Actor));
-	}
-}
-
-FGameplayAbilitySpecHandle ARPGCharacterBase::AcquireAbility(TSubclassOf<UGameplayAbility> AbilityToAcquire, AActor* SourceObject /*= nullptr*/)
-{
-	/*just a fail safe, this will be getting called by AddItemToSlot and it should already check for the component and authority, so should not fail*/
-	if (!AbilitySystemComponent || !HasAuthority() || !AbilityToAcquire)
-	{
-		return FGameplayAbilitySpecHandle();
-	}
-
-	//pass INDEX_NONE for InputID since we aren't using the input mapping
-	return AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityToAcquire, 1, INDEX_NONE, SourceObject));
-}
-
-AActor* ARPGCharacterBase::GetCurrentWeapon() const
-{
-	//#TODO current weapon slot
-	const FRPGInventorySlotData* FoundSlotData = SlottedInventory.FindByKey(ERPGInventorySlot::WeaponSlot1);
-
-	if (FoundSlotData)
-	{
-		return FoundSlotData->Actor;
+		return GetInventoryComponent()->GetCurrentWeapon();
 	}
 
 	return nullptr;
+}
+
+void ARPGCharacterBase::OnMeleeAttackStarted_Implementation()
+{
+	ARPGInventoryItemBase* CurrentWeapon = GetCurrentWeapon();
+	ARPGMeleeWeaponActor* MeleeWeapon = (CurrentWeapon) ? Cast<ARPGMeleeWeaponActor>(CurrentWeapon) : nullptr;
+	if (MeleeWeapon)
+	{
+		MeleeWeapon->BeginAttack();
+	}
+}
+
+void ARPGCharacterBase::OnMeleeAttackEnded_Implementation()
+{
+	ARPGInventoryItemBase* CurrentWeapon = GetCurrentWeapon();
+	ARPGMeleeWeaponActor* MeleeWeapon = (CurrentWeapon) ? Cast<ARPGMeleeWeaponActor>(CurrentWeapon) : nullptr;
+	if (MeleeWeapon)
+	{
+		MeleeWeapon->EndAttack();
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -225,44 +307,18 @@ void ARPGCharacterBase::SetupPlayerInputComponent(class UInputComponent* PlayerI
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &ARPGCharacterBase::LookUpAtRate);
 
-	// handle touch devices
-	PlayerInputComponent->BindTouch(IE_Pressed, this, &ARPGCharacterBase::TouchStarted);
-	PlayerInputComponent->BindTouch(IE_Released, this, &ARPGCharacterBase::TouchStopped);
-
-	// VR headset functionality
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ARPGCharacterBase::OnResetVR);
-
 	//#TODO input for charging the attack, call normal attack on IE_Released
 	//if the weapon can be charged then attack on IE_Released, otherwise attack on IE_Pressed
 	//Bind the input ability, use the ability that is taken from the weapon
 	PlayerInputComponent->BindAction("NormalAttack", IE_Pressed, this, &ARPGCharacterBase::NormalAttack);
-}
 
-
-void ARPGCharacterBase::OnRep_SlottedInventory()
-{
-	//#TODO call swap weapons or get the best next weapon, since the inventory might have dropped or swapped our current weapon
-}
-
-void ARPGCharacterBase::OnResetVR()
-{
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
-}
-
-void ARPGCharacterBase::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
-{
-		Jump();
-}
-
-void ARPGCharacterBase::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
-{
-		StopJumping();
+	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &ARPGCharacterBase::Interact);
 }
 
 void ARPGCharacterBase::NormalAttack()
 {
 	//#TODO FRPGInventorySlot CurrentWeaponSlot, change this instead of having a pointer to an actor
-	ActivateAbilitiesWithItemSlot(ERPGInventorySlot::WeaponSlot1);
+	ActivateAbilitiesWithInputID(ERPGAbilityInputID::PrimaryFire);
 }
 
 void ARPGCharacterBase::TurnAtRate(float Rate)

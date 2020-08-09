@@ -6,7 +6,7 @@
 URPGAsyncTaskAttributeChanged* URPGAsyncTaskAttributeChanged::ListenForAttributeChange(UAbilitySystemComponent* AbilitySystemComponent, FGameplayAttribute Attribute)
 {
 	URPGAsyncTaskAttributeChanged* WaitForAttributeChangedTask = NewObject<URPGAsyncTaskAttributeChanged>();
-	WaitForAttributeChangedTask->ASC = AbilitySystemComponent;
+	WaitForAttributeChangedTask->AbilitySystemComponentRef = AbilitySystemComponent;
 	WaitForAttributeChangedTask->AttributeToListenFor = Attribute;
 
 	if (!IsValid(AbilitySystemComponent) || !Attribute.IsValid())
@@ -23,7 +23,7 @@ URPGAsyncTaskAttributeChanged* URPGAsyncTaskAttributeChanged::ListenForAttribute
 URPGAsyncTaskAttributeChanged* URPGAsyncTaskAttributeChanged::ListenForAttributesChange(UAbilitySystemComponent* AbilitySystemComponent, TArray<FGameplayAttribute> Attributes)
 {
 	URPGAsyncTaskAttributeChanged* WaitForAttributeChangedTask = NewObject<URPGAsyncTaskAttributeChanged>();
-	WaitForAttributeChangedTask->ASC = AbilitySystemComponent;
+	WaitForAttributeChangedTask->AbilitySystemComponentRef = AbilitySystemComponent;
 	WaitForAttributeChangedTask->AttributesToListenFor = Attributes;
 
 	if (!IsValid(AbilitySystemComponent) || Attributes.Num() < 1)
@@ -42,13 +42,13 @@ URPGAsyncTaskAttributeChanged* URPGAsyncTaskAttributeChanged::ListenForAttribute
 
 void URPGAsyncTaskAttributeChanged::EndTask()
 {
-	if (IsValid(ASC))
+	if (IsValid(AbilitySystemComponentRef))
 	{
-		ASC->GetGameplayAttributeValueChangeDelegate(AttributeToListenFor).RemoveAll(this);
+		AbilitySystemComponentRef->GetGameplayAttributeValueChangeDelegate(AttributeToListenFor).RemoveAll(this);
 
 		for (FGameplayAttribute Attribute : AttributesToListenFor)
 		{
-			ASC->GetGameplayAttributeValueChangeDelegate(Attribute).RemoveAll(this);
+			AbilitySystemComponentRef->GetGameplayAttributeValueChangeDelegate(Attribute).RemoveAll(this);
 		}
 	}
 

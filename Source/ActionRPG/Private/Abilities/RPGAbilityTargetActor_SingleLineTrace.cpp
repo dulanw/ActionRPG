@@ -1,16 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Abilities/TargetDataActors/RPGTDA_SingleLineTrace.h"
+#include "Abilities/RPGAbilityTargetActor_SingleLineTrace.h"
 #include "DrawDebugHelpers.h"
 
-ARPGTDA_SingleLineTrace::ARPGTDA_SingleLineTrace(const FObjectInitializer& ObjectInitializer)
+ARPGAbilityTargetActor_SingleLineTrace::ARPGAbilityTargetActor_SingleLineTrace(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 	ShouldProduceTargetDataOnServer = false;
 }
 
-void ARPGTDA_SingleLineTrace::ConfirmTargetingAndContinue()
+void ARPGAbilityTargetActor_SingleLineTrace::ConfirmTargetingAndContinue()
 {
 	check(ShouldProduceTargetData());
 	if (SourceActor)
@@ -20,7 +20,7 @@ void ARPGTDA_SingleLineTrace::ConfirmTargetingAndContinue()
 	}
 }
 
-FHitResult ARPGTDA_SingleLineTrace::PerformTrace(AActor* InSourceActor)
+FHitResult ARPGAbilityTargetActor_SingleLineTrace::PerformTrace(AActor* InSourceActor)
 {
 	bool bTraceComplex = false;
 	TArray<AActor*> ActorsToIgnore;

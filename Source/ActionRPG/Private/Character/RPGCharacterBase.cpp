@@ -62,8 +62,6 @@ ARPGCharacterBase::ARPGCharacterBase(const FObjectInitializer& ObjectInitializer
 
 	// Note: The skeletal mesh and animation blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
-
-
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(ARPGCharacterBase::AbilitySystemComponentName);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	AbilitySystemComponent->SetIsReplicated(true);
@@ -75,6 +73,16 @@ ARPGCharacterBase::ARPGCharacterBase(const FObjectInitializer& ObjectInitializer
 
 	ItemToPickup = nullptr;
 	bInventoryUIOpen = false;
+}
+
+void ARPGCharacterBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->OnAbilityEnded.AddUObject(this, &ARPGCharacterBase::OnAbilityEnd);
+	}
 }
 
 void ARPGCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -245,6 +253,11 @@ UAbilitySystemComponent* ARPGCharacterBase::GetAbilitySystemComponent() const
 URPGAttributeSetBase* ARPGCharacterBase::GetCharacterAttributeSet()
 {
 	return CharacterAttributeSet;
+}
+
+void ARPGCharacterBase::OnAbilityEnd(const FAbilityEndedData& AbilityEndData)
+{
+	OnAbilityEnded.Broadcast(AbilityEndData.AbilityThatEnded, AbilityEndData.AbilitySpecHandle, AbilityEndData.bReplicateEndAbility, AbilityEndData.bWasCancelled);
 }
 
 bool ARPGCharacterBase::ActivateAbilitiesWithInputID(ERPGAbilityInputID InputID, bool bAllowRemoteActivation /*= true*/)

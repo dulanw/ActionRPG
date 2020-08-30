@@ -5,9 +5,12 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "GameplayAbilitySpec.h"
 #include "Character/RPGInventoryComponent.h"
 #include "RPGCharacterBase.generated.h"
 
+/*Wrapper around OnAbilityEnded since it's not a dynamic delegate, cannot access FAbilityEndedData from blueprint so pass the individual data*/
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FRPGGameplayAbilityEndedDelegate, class UGameplayAbility*, AbilityThatEnded, FGameplayAbilitySpecHandle, AbilitySpecHandle, bool, bReplicateEndAbility, bool, bWasCancelled);
 
 UCLASS(config=Game)
 class ARPGCharacterBase : public ACharacter, public IAbilitySystemInterface
@@ -54,6 +57,8 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 	ARPGCharacterBase(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+	virtual void PostInitializeComponents() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -143,13 +148,16 @@ public:
 	//callback when the user closes inventory (by clicking close without selecting a slot)
 	void OnCloseInventoryUI();
 
-
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
 public:
+	UPROPERTY(BlueprintAssignable)
+	FRPGGameplayAbilityEndedDelegate OnAbilityEnded;
+
+	void OnAbilityEnd(const FAbilityEndedData& AbilityEndData);
 
 	/**
 	 * Activate the ability using data from inventory component, use the component on character with AI and PlayerState with Players.

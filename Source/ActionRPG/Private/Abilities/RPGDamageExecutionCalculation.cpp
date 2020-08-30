@@ -35,7 +35,8 @@ static const FRPGDamageStatics& DamageStatics()
 
 URPGDamageExecutionCalculation::URPGDamageExecutionCalculation()
 {
-
+	RelevantAttributesToCapture.Add(DamageStatics().DamageDef);
+	RelevantAttributesToCapture.Add(DamageStatics().ArmorDef);
 }
 
 void URPGDamageExecutionCalculation::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, OUT FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const

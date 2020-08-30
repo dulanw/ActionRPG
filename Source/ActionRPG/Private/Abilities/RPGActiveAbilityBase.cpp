@@ -32,7 +32,13 @@ URPGActiveAbilityBase::URPGActiveAbilityBase(const FObjectInitializer& ObjectIni
 	DamageGameplayEffectClass = nullptr;
 	AnimationMontage = nullptr;
 	OverrideAnimationPlayTime = -1.0f;
+
+	bCooldownTagsInAbility = true;
+
+	bCooldownSetByCaller = true;
 	BaseCooldownDuration = 0.0f;
+
+	bDamageSetByCaller = true;
 	BaseDamage = 0.0f;
 }
 
@@ -68,7 +74,12 @@ void URPGActiveAbilityBase::ApplyCooldown(const FGameplayAbilitySpecHandle Handl
 	{
 		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(CooldownGE->GetClass(), GetAbilityLevel());
 		SpecHandle.Data.Get()->DynamicGrantedTags.AppendTags(GetAdditionalCooldownTags());
-		SpecHandle.Data.Get()->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.CooldownDuration")), GetCooldownDuration());
+
+		if (bCooldownSetByCaller)
+		{
+			SpecHandle.Data.Get()->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.CooldownDuration")), GetCooldownDuration());
+		}
+		
 		ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
 	}
 }
@@ -145,17 +156,23 @@ FGameplayTagContainer URPGActiveAbilityBase::GetAdditionalCooldownTags() const
 		return FGameplayTagContainer();
 	}
 
-	const URPGInventoryComponent* InventoryComponent = AvatarCharacter->GetInventoryComponent();
-	check(InventoryComponent); //inventory component should always be valid otherwise the ability would not exist on the character #TODO AI will fail this since they will not have an inventory
-	
-	//#TODO check if player controller, if ai then return since ai will not have additional dynamic cool down tags for the slots
+	FGameplayTagContainer CooldownTags;
 
-	const FGameplayAbilitySpecHandle SpecHandle = GetCurrentAbilitySpecHandle();
-	const ERPGAbilityInputID AbilityInput = InventoryComponent->GetAbilityHandleInputID(SpecHandle);
-	FGameplayTagContainer CooldownTags = InventoryComponent->GetAbilityInputCooldownTag(AbilityInput); //get the input slot cool down tags
-	CooldownTags.AppendTags(AbilityCooldownTags); //add the ability specific cool downs
+	//we need to get the cool down for the current equipped slot only if the controller is a player controller
+	const URPGInventoryComponent* InventoryComponent = AvatarCharacter->GetInventoryComponent(); //ai would return null since the inventory component will not be set during OnPossessedBy
+	if (GetActorInfo().PlayerController.IsValid() && InventoryComponent)
+	{
+		const FGameplayAbilitySpecHandle SpecHandle = GetCurrentAbilitySpecHandle();
+		const ERPGAbilityInputID AbilityInput = InventoryComponent->GetAbilityHandleInputID(SpecHandle);
+		CooldownTags.AppendTags(InventoryComponent->GetAbilityInputCooldownTag(AbilityInput)); //get the input slot cool down tags
+	}
 
-	if (CooldownTags.Num() <= 0)
+	if (bCooldownTagsInAbility)
+	{
+		CooldownTags.AppendTags(AbilityCooldownTags); //add the ability specific cool downs
+	}
+
+	if (CooldownTags.Num() == 0)
 	{
 		UE_LOG(LogAbilitySystem, Warning, TEXT("Ability %s URPGActiveAbilityBase::GetAdditionalCooldownTags empty, make sure ability or input slot has cooldown tags"), *GetName());
 	}
@@ -163,10 +180,12 @@ FGameplayTagContainer URPGActiveAbilityBase::GetAdditionalCooldownTags() const
 	return CooldownTags;
 }
 
-void URPGActiveAbilityBase::ApplyDamageEffectToTargetData(const FGameplayAbilityTargetDataHandle& TargetData) const
+void URPGActiveAbilityBase::ApplyDamageEffectToTargetData_Implementation(const FGameplayAbilityTargetDataHandle& TargetData) const
 {
-	//return if no target data
-	if (TargetData.Num() <= 0)
+	//return if no target data or we are not authority, we are not predicting data since
+	//Prediction keys are guaranteed to be valid during an atomic grouping of instructions "window" in GameplayAbilities starting with Activation from the activation prediction key. You can think of this as being only valid during one frame.
+	//#TODO add Scoped Prediction Window to play anim montage etc..
+	if (TargetData.Num() <= 0 || !GetActorInfo().OwnerActor->HasAuthority())
 	{
 		return;
 	}
@@ -177,13 +196,16 @@ void URPGActiveAbilityBase::ApplyDamageEffectToTargetData(const FGameplayAbility
 		FGameplayEffectSpecHandle DamageSpecHandle = MakeOutgoingGameplayEffectSpec(DamageGameplayEffectClass, GetAbilityLevel());
 		FGameplayEffectSpec* DamageSpec = DamageSpecHandle.Data.Get();
 
-		//#TODO calculate the damage with critical hit chance and damage %
-		float DamageMagnitude = GetDamage();
-
 		//check if attack missed
 		if (DamageSpec)
 		{
-			DamageSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.Damage")), DamageMagnitude);
+			if (bDamageSetByCaller)
+			{
+				//#TODO calculate the damage with critical hit chance and damage %
+				float DamageMagnitude = GetDamage();
+				DamageSpec->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.Damage")), DamageMagnitude);
+			}
+	
 			ApplyGameplayEffectSpecToTarget(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, DamageSpecHandle, TargetData);
 		}
 	}
@@ -191,11 +213,6 @@ void URPGActiveAbilityBase::ApplyDamageEffectToTargetData(const FGameplayAbility
 	{
 		UE_LOG(LogAbilitySystem, Warning, TEXT("Ability %s DamageGameplayEffectClass null"), *GetName());
 	}
-}
-
-void URPGActiveAbilityBase::K2_ApplyDamageEffectToTargetData_Implementation(const FGameplayAbilityTargetDataHandle& TargetData) const
-{
-	ApplyDamageEffectToTargetData(TargetData);
 }
 
 

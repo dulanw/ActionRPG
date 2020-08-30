@@ -7,7 +7,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitTargetData.h"
 #include "Abilities/GameplayAbilityTargetActor.h"
 #include "GameplayTagContainer.h"
-#include "RPGAT_WaitTargetData.generated.h"
+#include "RPGAbilityTask_WaitTargetData.generated.h"
 
 
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRPGWaitTargetDataDelegate, const FGameplayAbilityTargetDataHandle&, Data);
@@ -16,7 +16,7 @@
  * Waits for TargetData from an already spawned TargetActor and does *NOT* destroy it when it receives data when used with WaitTargetDataReusableActor
  */
 UCLASS(notplaceable)
-class ACTIONRPG_API URPGAT_WaitTargetData : public UAbilityTask
+class ACTIONRPG_API URPGAbilityTask_WaitTargetData : public UAbilityTask
 {
 	GENERATED_BODY()
 	
@@ -27,7 +27,7 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FWaitTargetDataDelegate Cancelled;
 
-	URPGAT_WaitTargetData(const FObjectInitializer& ObjectInitializer);
+	URPGAbilityTask_WaitTargetData(const FObjectInitializer& ObjectInitializer);
 
 	UFUNCTION()
 	void OnTargetDataReplicatedCallback(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag ActivationTag);
@@ -43,11 +43,11 @@ public:
 
 	/** Spawns target actor and waits for it to return valid data or to be canceled. */
 	UFUNCTION(BlueprintCallable, meta = (HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "true", HideSpawnParms = "Instigator"), Category = "Ability|Tasks")
-	static URPGAT_WaitTargetData* WaitTargetData(UGameplayAbility* OwningAbility, FName TaskInstanceName, TEnumAsByte<EGameplayTargetingConfirmation::Type> ConfirmationType, TSubclassOf<AGameplayAbilityTargetActor> Class, bool bCreateKeyIfNotValidForMorePredicting);
+	static URPGAbilityTask_WaitTargetData* WaitTargetData(UGameplayAbility* OwningAbility, FName TaskInstanceName, TEnumAsByte<EGameplayTargetingConfirmation::Type> ConfirmationType, TSubclassOf<AGameplayAbilityTargetActor> Class, bool bCreateKeyIfNotValidForMorePredicting);
 
 	/** Uses specified target actor and waits for it to return valid data or to be canceled. */
 	UFUNCTION(BlueprintCallable, meta = (HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "true", HideSpawnParms = "Instigator"), Category = "Ability|Tasks")
-	static URPGAT_WaitTargetData* WaitTargetDataUsingActor(UGameplayAbility* OwningAbility, FName TaskInstanceName, TEnumAsByte<EGameplayTargetingConfirmation::Type> ConfirmationType, AGameplayAbilityTargetActor* TargetActor, bool bCreateKeyIfNotValidForMorePredicting, bool bReusableActor);
+	static URPGAbilityTask_WaitTargetData* WaitTargetDataUsingActor(UGameplayAbility* OwningAbility, FName TaskInstanceName, TEnumAsByte<EGameplayTargetingConfirmation::Type> ConfirmationType, AGameplayAbilityTargetActor* TargetActor, bool bCreateKeyIfNotValidForMorePredicting, bool bReusableActor);
 
 	UFUNCTION(BlueprintCallable, meta = (HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "true"), Category = "Abilities")
 	bool BeginSpawningActor(UGameplayAbility* OwningAbility, TSubclassOf<AGameplayAbilityTargetActor> Class, AGameplayAbilityTargetActor*& SpawnedActor);

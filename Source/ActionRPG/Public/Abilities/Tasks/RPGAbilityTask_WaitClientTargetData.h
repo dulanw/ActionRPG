@@ -5,24 +5,24 @@
 #include "CoreMinimal.h"
 #include "Abilities/Tasks/AbilityTask.h"
 #include "Abilities/Tasks/AbilityTask_WaitTargetData.h"
-#include "RPGAT_WaitForClientTargetData.generated.h"
+#include "RPGAbilityTask_WaitClientTargetData.generated.h"
 
 /**
  * Should only be run on the server, 
  */
 UCLASS()
-class ACTIONRPG_API URPGAT_WaitForClientTargetData : public UAbilityTask
+class ACTIONRPG_API URPGAbilityTask_WaitClientTargetData : public UAbilityTask
 {
 	GENERATED_BODY()
 
 public:
-	URPGAT_WaitForClientTargetData(const FObjectInitializer& ObjectInitializer);
+	URPGAbilityTask_WaitClientTargetData(const FObjectInitializer& ObjectInitializer);
 
 	UPROPERTY(BlueprintAssignable)
 	FWaitTargetDataDelegate	ValidData;
 
 	UFUNCTION(BlueprintCallable, meta = (HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "true", HideSpawnParms = "Instigator"), Category = "Ability|Tasks")
-	static URPGAT_WaitForClientTargetData* WaitForClientTargetData(UGameplayAbility* OwningAbility, FName TaskInstanceName, bool TriggerOnce);
+	static URPGAbilityTask_WaitClientTargetData* WaitForClientTargetData(UGameplayAbility* OwningAbility, FName TaskInstanceName, bool TriggerOnce);
 
 	virtual void Activate() override;
 

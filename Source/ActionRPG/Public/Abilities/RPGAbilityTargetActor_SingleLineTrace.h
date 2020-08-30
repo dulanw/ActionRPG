@@ -4,17 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbilityTargetActor_Trace.h"
-#include "RPGTDA_SingleLineTrace.generated.h"
+#include "RPGAbilityTargetActor_SingleLineTrace.generated.h"
 
 /**
  * 
  */
 UCLASS(notplaceable)
-class ACTIONRPG_API ARPGTDA_SingleLineTrace : public AGameplayAbilityTargetActor_Trace
+class ACTIONRPG_API ARPGAbilityTargetActor_SingleLineTrace : public AGameplayAbilityTargetActor_Trace
 {
 	GENERATED_BODY()
 public:
-	ARPGTDA_SingleLineTrace(const FObjectInitializer& ObjectInitializer);
+	ARPGAbilityTargetActor_SingleLineTrace(const FObjectInitializer& ObjectInitializer);
 
 	//need to override this since AGameplayAbilityTargetActor_Trace set bDebug to false here always
 	virtual void ConfirmTargetingAndContinue() override;

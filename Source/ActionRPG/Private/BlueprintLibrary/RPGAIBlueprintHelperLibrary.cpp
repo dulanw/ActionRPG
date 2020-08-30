@@ -79,3 +79,10 @@ float URPGAIBlueprintHelperLibrary::GetSimpleCollisionRadius(const AActor* const
 {
 	return Actor->GetSimpleCollisionRadius();
 }
+
+bool URPGAIBlueprintHelperLibrary::TryActivateAbility(class UAbilitySystemComponent* const& AbilitySystemComponent, FGameplayAbilitySpecHandle AbilityToActivate, bool bAllowRemoteActivation /*= true*/)
+{
+	check(AbilitySystemComponent);
+
+	return AbilitySystemComponent->TryActivateAbility(AbilityToActivate, bAllowRemoteActivation);
+}

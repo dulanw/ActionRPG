@@ -31,4 +31,12 @@ public:
 	/** Returns the radius of the collision cylinder from GetSimpleCollisionCylinder(). */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "AI Blueprint Helper Library")
 	static float GetSimpleCollisionRadius(const class AActor* const &Actor);
+
+	/**
+	 * Attempts to activate the given ability, will check costs and requirements before doing so.
+	 * Returns true if it thinks it activated, but it may return false positives due to failure later in activation.
+	 * If bAllowRemoteActivation is true, it will remotely activate local/server abilities, if false it will only try to locally activate the ability
+	 */
+	UFUNCTION(BlueprintCallable, Category = "AI Blueprint Helper Library")
+	static bool TryActivateAbility(class UAbilitySystemComponent* const &AbilitySystemComponent, FGameplayAbilitySpecHandle AbilityToActivate, bool bAllowRemoteActivation = true);
 };

@@ -1,16 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Abilities/Tasks/RPGAT_WaitTargetData.h"
+#include "Abilities/Tasks/RPGAbilityTask_WaitTargetData.h"
 #include "AbilitySystemComponent.h"
 
-URPGAT_WaitTargetData::URPGAT_WaitTargetData(const FObjectInitializer& ObjectInitializer)
+URPGAbilityTask_WaitTargetData::URPGAbilityTask_WaitTargetData(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 
 }
 
-void URPGAT_WaitTargetData::OnTargetDataReplicatedCallback(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag ActivationTag)
+void URPGAbilityTask_WaitTargetData::OnTargetDataReplicatedCallback(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag ActivationTag)
 {
 	check(AbilitySystemComponent);
 
@@ -47,7 +47,7 @@ void URPGAT_WaitTargetData::OnTargetDataReplicatedCallback(const FGameplayAbilit
 	}
 }
 
-void URPGAT_WaitTargetData::OnTargetDataReplicatedCancelledCallback()
+void URPGAbilityTask_WaitTargetData::OnTargetDataReplicatedCancelledCallback()
 {
 	check(AbilitySystemComponent);
 	if (ShouldBroadcastAbilityTaskDelegates())
@@ -57,7 +57,7 @@ void URPGAT_WaitTargetData::OnTargetDataReplicatedCancelledCallback()
 	EndTask();
 }
 
-void URPGAT_WaitTargetData::OnTargetDataReadyCallback(const FGameplayAbilityTargetDataHandle& Data)
+void URPGAbilityTask_WaitTargetData::OnTargetDataReadyCallback(const FGameplayAbilityTargetDataHandle& Data)
 {
 	check(AbilitySystemComponent);
 	if (!Ability)
@@ -96,7 +96,7 @@ void URPGAT_WaitTargetData::OnTargetDataReadyCallback(const FGameplayAbilityTarg
 	}
 }
 
-void URPGAT_WaitTargetData::OnTargetDataCancelledCallback(const FGameplayAbilityTargetDataHandle& Data)
+void URPGAbilityTask_WaitTargetData::OnTargetDataCancelledCallback(const FGameplayAbilityTargetDataHandle& Data)
 {
 	check(AbilitySystemComponent);
 
@@ -118,9 +118,9 @@ void URPGAT_WaitTargetData::OnTargetDataCancelledCallback(const FGameplayAbility
 	EndTask();
 }
 
-URPGAT_WaitTargetData* URPGAT_WaitTargetData::WaitTargetData(UGameplayAbility* OwningAbility, FName TaskInstanceName, TEnumAsByte<EGameplayTargetingConfirmation::Type> ConfirmationType, TSubclassOf<AGameplayAbilityTargetActor> InTargetClass, bool bCreateKeyIfNotValidForMorePredicting)
+URPGAbilityTask_WaitTargetData* URPGAbilityTask_WaitTargetData::WaitTargetData(UGameplayAbility* OwningAbility, FName TaskInstanceName, TEnumAsByte<EGameplayTargetingConfirmation::Type> ConfirmationType, TSubclassOf<AGameplayAbilityTargetActor> InTargetClass, bool bCreateKeyIfNotValidForMorePredicting)
 {
-	URPGAT_WaitTargetData* MyObj = NewAbilityTask<URPGAT_WaitTargetData>(OwningAbility, TaskInstanceName);		//Register for task list here, providing a given FName as a key
+	URPGAbilityTask_WaitTargetData* MyObj = NewAbilityTask<URPGAbilityTask_WaitTargetData>(OwningAbility, TaskInstanceName);		//Register for task list here, providing a given FName as a key
 	MyObj->TargetClass = InTargetClass;
 	MyObj->TargetActor = nullptr;
 	MyObj->ConfirmationType = ConfirmationType;
@@ -128,9 +128,9 @@ URPGAT_WaitTargetData* URPGAT_WaitTargetData::WaitTargetData(UGameplayAbility* O
 	return MyObj;
 }
 
-URPGAT_WaitTargetData* URPGAT_WaitTargetData::WaitTargetDataUsingActor(UGameplayAbility* OwningAbility, FName TaskInstanceName, TEnumAsByte<EGameplayTargetingConfirmation::Type> ConfirmationType, AGameplayAbilityTargetActor* InTargetActor, bool bCreateKeyIfNotValidForMorePredicting, bool bReusableActor)
+URPGAbilityTask_WaitTargetData* URPGAbilityTask_WaitTargetData::WaitTargetDataUsingActor(UGameplayAbility* OwningAbility, FName TaskInstanceName, TEnumAsByte<EGameplayTargetingConfirmation::Type> ConfirmationType, AGameplayAbilityTargetActor* InTargetActor, bool bCreateKeyIfNotValidForMorePredicting, bool bReusableActor)
 {
-	URPGAT_WaitTargetData* MyObj = NewAbilityTask<URPGAT_WaitTargetData>(OwningAbility, TaskInstanceName);		//Register for task list here, providing a given FName as a key
+	URPGAbilityTask_WaitTargetData* MyObj = NewAbilityTask<URPGAbilityTask_WaitTargetData>(OwningAbility, TaskInstanceName);		//Register for task list here, providing a given FName as a key
 	MyObj->TargetActor = InTargetActor;
 	MyObj->ConfirmationType = ConfirmationType;
 	MyObj->bCreateKeyIfNotValidForMorePredicting = bCreateKeyIfNotValidForMorePredicting;
@@ -138,7 +138,7 @@ URPGAT_WaitTargetData* URPGAT_WaitTargetData::WaitTargetDataUsingActor(UGameplay
 	return MyObj;
 }
 
-bool URPGAT_WaitTargetData::BeginSpawningActor(UGameplayAbility* OwningAbility, TSubclassOf<AGameplayAbilityTargetActor> InTargetClass, AGameplayAbilityTargetActor*& SpawnedActor)
+bool URPGAbilityTask_WaitTargetData::BeginSpawningActor(UGameplayAbility* OwningAbility, TSubclassOf<AGameplayAbilityTargetActor> InTargetClass, AGameplayAbilityTargetActor*& SpawnedActor)
 {
 	SpawnedActor = nullptr;
 
@@ -168,7 +168,7 @@ bool URPGAT_WaitTargetData::BeginSpawningActor(UGameplayAbility* OwningAbility, 
 	return (SpawnedActor != nullptr);
 }
 
-void URPGAT_WaitTargetData::FinishSpawningActor(UGameplayAbility* OwningAbility, AGameplayAbilityTargetActor* SpawnedActor)
+void URPGAbilityTask_WaitTargetData::FinishSpawningActor(UGameplayAbility* OwningAbility, AGameplayAbilityTargetActor* SpawnedActor)
 {
 	if (SpawnedActor && !SpawnedActor->IsPendingKill())
 	{
@@ -182,9 +182,9 @@ void URPGAT_WaitTargetData::FinishSpawningActor(UGameplayAbility* OwningAbility,
 	}
 }
 
-void URPGAT_WaitTargetData::Activate()
+void URPGAbilityTask_WaitTargetData::Activate()
 {
-/*
+/*  FROM GASHOOTER
 	if (IsPendingKill())
 	{
 		return;
@@ -243,7 +243,7 @@ void URPGAT_WaitTargetData::Activate()
 	}
 }
 
-void URPGAT_WaitTargetData::ExternalConfirm(bool bEndTask)
+void URPGAbilityTask_WaitTargetData::ExternalConfirm(bool bEndTask)
 {
 	check(AbilitySystemComponent);
 	if (TargetActor)
@@ -256,7 +256,7 @@ void URPGAT_WaitTargetData::ExternalConfirm(bool bEndTask)
 	Super::ExternalConfirm(bEndTask);
 }
 
-void URPGAT_WaitTargetData::ExternalCancel()
+void URPGAbilityTask_WaitTargetData::ExternalCancel()
 {
 	check(AbilitySystemComponent);
 	if (ShouldBroadcastAbilityTaskDelegates())
@@ -266,7 +266,7 @@ void URPGAT_WaitTargetData::ExternalCancel()
 	Super::ExternalCancel();
 }
 
-bool URPGAT_WaitTargetData::ShouldSpawnTargetActor() const
+bool URPGAbilityTask_WaitTargetData::ShouldSpawnTargetActor() const
 {
 	check(TargetClass);
 	check(Ability);
@@ -283,7 +283,7 @@ bool URPGAT_WaitTargetData::ShouldSpawnTargetActor() const
 	return (bReplicates || bIsLocallyControlled || bShouldProduceTargetDataOnServer);
 }
 
-void URPGAT_WaitTargetData::InitializeTargetActor(AGameplayAbilityTargetActor* SpawnedActor) const
+void URPGAbilityTask_WaitTargetData::InitializeTargetActor(AGameplayAbilityTargetActor* SpawnedActor) const
 {
 	check(SpawnedActor);
 	check(Ability);
@@ -291,11 +291,11 @@ void URPGAT_WaitTargetData::InitializeTargetActor(AGameplayAbilityTargetActor* S
 	SpawnedActor->MasterPC = Ability->GetCurrentActorInfo()->PlayerController.Get();
 
 	// If we spawned the target actor, always register the callbacks for when the data is ready.
-	SpawnedActor->TargetDataReadyDelegate.AddUObject(const_cast<URPGAT_WaitTargetData*>(this), &URPGAT_WaitTargetData::OnTargetDataReadyCallback);
-	SpawnedActor->CanceledDelegate.AddUObject(const_cast<URPGAT_WaitTargetData*>(this), &URPGAT_WaitTargetData::OnTargetDataCancelledCallback);
+	SpawnedActor->TargetDataReadyDelegate.AddUObject(const_cast<URPGAbilityTask_WaitTargetData*>(this), &URPGAbilityTask_WaitTargetData::OnTargetDataReadyCallback);
+	SpawnedActor->CanceledDelegate.AddUObject(const_cast<URPGAbilityTask_WaitTargetData*>(this), &URPGAbilityTask_WaitTargetData::OnTargetDataCancelledCallback);
 }
 
-void URPGAT_WaitTargetData::FinalizeTargetActor(AGameplayAbilityTargetActor* SpawnedActor) const
+void URPGAbilityTask_WaitTargetData::FinalizeTargetActor(AGameplayAbilityTargetActor* SpawnedActor) const
 {
 	check(SpawnedActor);
 	check(Ability);
@@ -322,7 +322,7 @@ void URPGAT_WaitTargetData::FinalizeTargetActor(AGameplayAbilityTargetActor* Spa
 	}
 }
 
-void URPGAT_WaitTargetData::RegisterTargetDataCallbacks()
+void URPGAbilityTask_WaitTargetData::RegisterTargetDataCallbacks()
 {
 	if (!ensure(IsPendingKill() == false))
 	{
@@ -332,11 +332,13 @@ void URPGAT_WaitTargetData::RegisterTargetDataCallbacks()
 	//check(TargetClass);
 	check(Ability);
 
-	//const AGameplayAbilityTargetActor* CDO = CastChecked<AGameplayAbilityTargetActor>(TargetClass->GetDefaultObject());
 
 	const bool bIsLocallyControlled = Ability->GetCurrentActorInfo()->IsLocallyControlled();
-	const bool bShouldProduceTargetDataOnServer = TargetActor->ShouldProduceTargetDataOnServer;
+
+	//changed to check the passed in actor instead of the CDO
+	//const AGameplayAbilityTargetActor* CDO = CastChecked<AGameplayAbilityTargetActor>(TargetClass->GetDefaultObject());
 	//const bool bShouldProduceTargetDataOnServer = CDO->ShouldProduceTargetDataOnServer;
+	const bool bShouldProduceTargetDataOnServer = TargetActor->ShouldProduceTargetDataOnServer;
 
 	// If not locally controlled (server for remote client), see if TargetData was already sent
 	// else register callback for when it does get here.
@@ -349,8 +351,8 @@ void URPGAT_WaitTargetData::RegisterTargetDataCallbacks()
 			FPredictionKey ActivationPredictionKey = GetActivationPredictionKey();
 
 			//Since multi fire is supported, we still need to hook up the callbacks
-			AbilitySystemComponent->AbilityTargetDataSetDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &URPGAT_WaitTargetData::OnTargetDataReplicatedCallback);
-			AbilitySystemComponent->AbilityTargetDataCancelledDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &URPGAT_WaitTargetData::OnTargetDataReplicatedCancelledCallback);
+			AbilitySystemComponent->AbilityTargetDataSetDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &URPGAbilityTask_WaitTargetData::OnTargetDataReplicatedCallback);
+			AbilitySystemComponent->AbilityTargetDataCancelledDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &URPGAbilityTask_WaitTargetData::OnTargetDataReplicatedCancelledCallback);
 
 			AbilitySystemComponent->CallReplicatedTargetDataDelegatesIfSet(SpecHandle, ActivationPredictionKey);
 
@@ -359,7 +361,7 @@ void URPGAT_WaitTargetData::RegisterTargetDataCallbacks()
 	}
 }
 
-void URPGAT_WaitTargetData::OnDestroy(bool AbilityEnded)
+void URPGAbilityTask_WaitTargetData::OnDestroy(bool AbilityEnded)
 {
 	if (TargetActor)
 	{
@@ -406,7 +408,7 @@ void URPGAT_WaitTargetData::OnDestroy(bool AbilityEnded)
 	Super::OnDestroy(AbilityEnded);
 }
 
-bool URPGAT_WaitTargetData::ShouldReplicateDataToServer() const
+bool URPGAbilityTask_WaitTargetData::ShouldReplicateDataToServer() const
 {
 	if (!Ability || !TargetActor)
 	{

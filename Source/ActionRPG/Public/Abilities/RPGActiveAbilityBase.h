@@ -79,18 +79,30 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Ability")
 	float OverrideAnimationPlayTime;
 
+	//should the cool down tags in the ability be passed to the ability cool down dynamic tags
+	UPROPERTY(EditDefaultsOnly, Category = "Ability", meta = (InlineEditConditionToggle))
+	bool bCooldownTagsInAbility;
+
 	/*The ability tags, these will be added to the DynamicGrantedTags of the cool down effect, the ability must have a cool down class and should ideally have a SetByCaller cool down value
 	 using the Data.CooldownDuration tag, abilities with the same cool down tags will share the cool down
 	 you can also use a gameplay effect for the cool down, but using this will allow you to set a base cool down effect for all items in the game but change the tags*/
-	UPROPERTY(EditDefaultsOnly, Category = "Ability")
+	UPROPERTY(EditDefaultsOnly, Category = "Ability", meta = (EditCondition = "bCooldownTagsInAbility"))
 	FGameplayTagContainer AbilityCooldownTags;
 
-	/*SetByCaller cool down value using the Data.CooldownDuration tag, can ignore this value if needed by not taking in SetByCaller tag of Data.CooldownDuration*/
+	/*if the cool down should be passed to cool down effect by SetByCaller, calls GetCooldown which returns the modified value i.e. states or power up increases the damage etc..*/
 	UPROPERTY(EditDefaultsOnly, Category = "Ability")
-	float BaseCooldownDuration;
+	bool bCooldownSetByCaller;
 
 	/*SetByCaller cool down value using the Data.CooldownDuration tag, can ignore this value if needed by not taking in SetByCaller tag of Data.CooldownDuration*/
+	UPROPERTY(EditDefaultsOnly, Category = "Ability", meta = (EditCondition = "bCooldownSetByCaller"))
+	float BaseCooldownDuration;
+
+	/*if the damage should be passed to damage effect by SetByCaller, calls GetDamage which returns the modified value i.e. states or power up increases the damage etc..*/
 	UPROPERTY(EditDefaultsOnly, Category = "Ability")
+	bool bDamageSetByCaller;
+
+	/*SetByCaller cool down value using the Data.CooldownDuration tag, can ignore this value if needed by not taking in SetByCaller tag of Data.CooldownDuration*/
+	UPROPERTY(EditDefaultsOnly, Category = "Ability", meta = (EditCondition = "bDamageSetByCaller"))
 	float BaseDamage;
 
 	/**get the dynamic cool down tags of the input to which this ability is bound to and the AbilityCooldownTags*/
@@ -99,11 +111,12 @@ protected:
 	//Handle target data, this is something common for all game play abilities, this will apply effects like freeze, light fire to target, reflect damage etc..
 	//called by K2_ApplyDamageEffectToTargetData, just splitting the functionality from the blueprint node to make it more clear
 	//will use GetDamage which returns the base damage unless K2_CalculateDamage is implemented in the child class
+	UFUNCTION(BlueprintNativeEvent, BlueprintPure = false, Category = "Gameplay Ability")
 	void ApplyDamageEffectToTargetData(const FGameplayAbilityTargetDataHandle& TargetData) const;
 
 	/*Blueprint node for HandleTargetData, base calls HandleTargetData. used to override the handle target data i.e. you want to fire effect on weapon or impact point*/
-	UFUNCTION(BlueprintNativeEvent, BlueprintPure = false, Category = "Gameplay Ability", DisplayName = "ApplyDamageEffectToTargetData", meta = (ScriptName = "ApplyDamageEffectToTargetData"))
-	void K2_ApplyDamageEffectToTargetData(const FGameplayAbilityTargetDataHandle& TargetData) const;
+	//UFUNCTION(BlueprintNativeEvent, BlueprintPure = false, Category = "Gameplay Ability", DisplayName = "ApplyDamageEffectToTargetData", meta = (ScriptName = "ApplyDamageEffectToTargetData"))
+	//void K2_ApplyDamageEffectToTargetData(const FGameplayAbilityTargetDataHandle& TargetData) const;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = Ability, DisplayName = "CalculateDamage", meta = (ScriptName = "CalculateDamage"))
 	float K2_CalculateDamage() const;

@@ -1,22 +1,22 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Abilities/Tasks/RPGAT_WaitForClientTargetData.h"
+#include "Abilities/Tasks/RPGAbilityTask_WaitClientTargetData.h"
 #include "AbilitySystemComponent.h"
 
-URPGAT_WaitForClientTargetData::URPGAT_WaitForClientTargetData(const FObjectInitializer& ObjectInitializer)
+URPGAbilityTask_WaitClientTargetData::URPGAbilityTask_WaitClientTargetData(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 
 }
 
-URPGAT_WaitForClientTargetData* URPGAT_WaitForClientTargetData::WaitForClientTargetData(UGameplayAbility* OwningAbility, FName TaskInstanceName, bool TriggerOnce)
+URPGAbilityTask_WaitClientTargetData* URPGAbilityTask_WaitClientTargetData::WaitForClientTargetData(UGameplayAbility* OwningAbility, FName TaskInstanceName, bool TriggerOnce)
 {
-	URPGAT_WaitForClientTargetData* MyObj = NewAbilityTask<URPGAT_WaitForClientTargetData>(OwningAbility, TaskInstanceName);
+	URPGAbilityTask_WaitClientTargetData* MyObj = NewAbilityTask<URPGAbilityTask_WaitClientTargetData>(OwningAbility, TaskInstanceName);
 	MyObj->bTriggerOnce = TriggerOnce;
 	return MyObj;
 }
 
-void URPGAT_WaitForClientTargetData::Activate()
+void URPGAbilityTask_WaitClientTargetData::Activate()
 {
 	if (!Ability || !Ability->GetCurrentActorInfo()->IsNetAuthority())
 	{
@@ -25,10 +25,10 @@ void URPGAT_WaitForClientTargetData::Activate()
 
 	FGameplayAbilitySpecHandle	SpecHandle = GetAbilitySpecHandle();
 	FPredictionKey ActivationPredictionKey = GetActivationPredictionKey();
-	AbilitySystemComponent->AbilityTargetDataSetDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &URPGAT_WaitForClientTargetData::OnTargetDataReplicatedCallback);
+	AbilitySystemComponent->AbilityTargetDataSetDelegate(SpecHandle, ActivationPredictionKey).AddUObject(this, &URPGAbilityTask_WaitClientTargetData::OnTargetDataReplicatedCallback);
 }
 
-void URPGAT_WaitForClientTargetData::OnTargetDataReplicatedCallback(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag ActivationTag)
+void URPGAbilityTask_WaitClientTargetData::OnTargetDataReplicatedCallback(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag ActivationTag)
 {
 	FGameplayAbilityTargetDataHandle MutableData = Data;
 	AbilitySystemComponent->ConsumeClientReplicatedTargetData(GetAbilitySpecHandle(), GetActivationPredictionKey());
@@ -44,7 +44,7 @@ void URPGAT_WaitForClientTargetData::OnTargetDataReplicatedCallback(const FGamep
 	}
 }
 
-void URPGAT_WaitForClientTargetData::OnDestroy(bool AbilityEnded)
+void URPGAbilityTask_WaitClientTargetData::OnDestroy(bool AbilityEnded)
 {
 	if (AbilitySystemComponent)
 	{
